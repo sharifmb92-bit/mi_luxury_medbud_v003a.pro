@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es" x-data="appBus()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MED BASHA PRO</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3448/3448339.png">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk1FRCBCQVN sparrowJUEgUFJPIiwKICAic2hvcnRfbmFtZSI6ICJNQkEgUFJPIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMGYxNzJhIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9jZG4taWNvbnMtcG5nLmZsYXRpY29uLmNvbS81MTIvMzQ0OC8zNDQ4MzM5LnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfQogIF0KfQ==">
+    <meta name="theme-color" content="#0f172a">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes amber-pulse {
+            0%, 100% { background-color: rgba(245, 158, 11, 0.3); }
+            50% { background-color: rgba(245, 158, 11, 1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.6); }
+        }
+        .animate-amber { animation: amber-pulse 1.2s infinite; color: white !important; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; transition: all 0.3s ease; overflow-x: hidden; }
+        input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .input-dark { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px; text-align: center; outline: none; width: 100%; }
+        .lcd-clock { font-family: 'Courier New', Courier, monospace; letter-spacing: 2px; }
+        .color-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
+    </style>
+</head>
+<body :style="'font-size: ' + settings.fontSize + 'px;'">
+
+    <div x-show="screen === 1" x-cloak class="p-4 max-w-md mx-auto pb-24">
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-black italic tracking-tighter" :style="'color:' + settings.colorMaestro">MED BASHA PRO</h1>
+                <p class="text-[10px] text-slate-500 uppercase font-black">Conductor Menorca</p>
+            </div>
+            <button @click="screen = 4; actualizarIconos()" class="p-2 bg-slate-800 rounded-full active:scale-90"><i data-lucide="settings"></i></button>
+        </header>
+
+        <div class="glass-card rounded-3xl p-4 mb-4 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <button @click="changeMonth(-1)" class="p-2"><i data-lucide="chevron-left"></i></button>
+                <h2 class="font-bold text-lg" x-text="monthNames[currentMonth] + ' ' + currentYear"></h2>
+                <button @click="changeMonth(1)" class="p-2"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-slate-500 mb-2">
+                <span>LU</span><span>MA</span><span>MI</span><span>JU</span><span>VI</span><span>SA</span><span>DO</span>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center">
+                <template x-for="day in daysInMonth">
+                    <button @click="day.num ? seleccionarDia(day.num) : null" 
+                         class="h-10 flex flex-col items-center justify-center rounded-xl relative transition-all active:scale-90" 
+                         :class="day.isToday ? 'bg-blue-600 font-bold shadow-lg shadow-blue-900/50' : (day.num ? 'hover:bg-white/5' : '')">
+                        <span x-text="day.num"></span>
+                        <div class="flex gap-0.5 mt-0.5" x-show="tieneRegistro(day.num)">
+                            <div :class="obtenerTipoRegistro(day.num) === 'partida' ? 'bg-orange-500' : 'bg-blue-400'" class="w-1.5 h-1.5 rounded-full"></div>
+                        </div>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <div @click="abrirAlarma()" class="glass-card rounded-2xl p-3 mb-6 flex items-center justify-center border-t-2 border-t-white/10 shadow-inner cursor-pointer active:scale-95 transition">
+            <div class="flex flex-col items-center">
+                <span class="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Reloj de a bordo</span>
+                <div class="text-3xl font-black lcd-clock text-white" x-text="timeNow">00:00:00</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button @click="openRegistro('continua')" class="glass-card p-6 rounded-3xl flex flex-col items-center gap-3 border-b-4 border-blue-500 active:scale-95 transition">
+                <i data-lucide="timer" class="text-blue-500 w-8 h-8"></i>
+                <span class="font-black uppercase text-xs">Continua</span>
+            </button>
+            <button @click="openRegistro('partida')" class="glass-card p-6 rounded-3xl flex flex-col items-center gap-3 border-b-4 border-orange-500 active:scale-95 transition">
+                <i data-lucide="split" class="text-orange-500 w-8 h-8"></i>
+                <span class="font-black uppercase text-xs">Partida</span>
+            </button>
+        </div>
+
+        <button @click="screen = 3; actualizarIconos()" class="w-full mt-6 glass-card p-5 rounded-2xl flex justify-between items-center active:bg-white/5">
+            <span class="font-bold text-sm uppercase italic">Resumen Nómina (Ciclo 16-15)</span>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-600"></i>
+        </button>
+    </div>
+
+    <div x-show="screen === 2" x-cloak class="p-4 max-w-md mx-auto pb-44">
+        <header class="flex items-center gap-4 mb-6">
+            <button @click="volverAlInicio()" class="p-2 bg-slate-800 rounded-full"><i data-lucide="arrow-left"></i></button>
+            <div class="flex-1">
+                <h2 class="text-xl font-black uppercase tracking-tighter" x-text="form.esPartida ? 'Jornada Partida' : 'Jornada Continua'"></h2>
+                <p class="text-[10px] text-blue-400 font-bold" x-text="'Fecha: ' + fechaSeleccionada"></p>
+            </div>
+            <button x-show="!form.esPartida" @click="form.esPartida = true; calcular();" class="bg-orange-600 text-white p-2 rounded-full shadow-lg active:scale-75">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <div class="space-y-4">
+            <div class="glass-card p-4 rounded-3xl border-l-4 border-blue-500">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[10px] font-black text-blue-400 uppercase">Bus Mañana</span>
+                    <input type="text" x-model="form.bus1" placeholder="BUS 1" class="w-20 input-dark text-yellow-500 font-black uppercase">
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="time" x-model="form.hE1" @change="calcular()" class="input-dark text-xl font-black">
+                    <input type="time" x-model="form.hS1" @change="calcular()" class="input-dark text-xl font-black">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" x-model="form.kmI1" @input="calcular()" placeholder="KM Ini" class="input-dark text-xs">
+                    <input type="number" x-model="form.kmF1" @input="calcular()" placeholder="KM Fin" class="input-dark text-xs">
+                </div>
+            </div>
+
+            <div x-show="form.esPartida" x-transition class="glass-card p-4 rounded-3xl border-l-4 border-orange-500">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[10px] font-black text-orange-400 uppercase">Bus Tarde</span>
+                    <input type="text" x-model="form.bus2" placeholder="BUS 2" class="w-20 input-dark text-yellow-500 font-black uppercase">
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="time" x-model="form.hE2" @change="calcular()" class="input-dark text-xl font-black">
+                    <input type="time" x-model="form.hS2" @change="calcular()" class="input-dark text-xl font-black">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" x-model="form.kmI2" @input="calcular()" placeholder="KM Ini" class="input-dark text-xs">
+                    <input type="number" x-model="form.kmF2" @input="calcular()" placeholder="KM Fin" class="input-dark text-xs">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-6">
+                <button @click="form.comida = !form.comida" 
+                        :class="form.comida ? 'bg-green-600' : (alertaComida ? 'animate-amber' : 'bg-slate-800 opacity-40')" 
+                        class="p-4 rounded-2xl flex flex-col items-center gap-1 font-black transition-all">
+                    <i data-lucide="utensils" class="w-4 h-4"></i>
+                    <span class="text-[9px] uppercase">Comida</span>
+                </button>
+                <button @click="form.cena = !form.cena" 
+                        :class="form.cena ? 'bg-green-600' : (alertaCena ? 'animate-amber' : 'bg-slate-800 opacity-40')" 
+                        class="p-4 rounded-2xl flex flex-col items-center gap-1 font-black transition-all">
+                    <i data-lucide="moon" class="w-4 h-4"></i>
+                    <span class="text-[9px] uppercase">Cena</span>
+                </button>
+                <button @click="form.festivo = !form.festivo" 
+                        :class="form.festivo ? 'bg-red-600' : 'bg-slate-800 opacity-40'" 
+                        class="p-4 rounded-2xl flex flex-col items-center gap-1 font-black transition-all">
+                    <i data-lucide="calendar-heart" class="w-4 h-4"></i>
+                    <span class="text-[9px] uppercase">Festivo</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 w-full glass-card border-t border-white/10 p-6 z-50">
+            <div class="flex justify-between items-center max-w-md mx-auto">
+                <div class="text-center">
+                    <p class="text-[9px] text-slate-500 font-black mb-1 uppercase">H. Total</p>
+                    <span class="text-3xl font-black text-green-400" x-text="res.hTotal">06:00</span>
+                </div>
+                <div class="text-center">
+                    <p class="text-[9px] text-slate-500 font-black mb-1 uppercase">KM Totales</p>
+                    <span class="text-3xl font-black text-cyan-400" x-text="res.kmTotal">0</span>
+                </div>
+                <button @click="guardarJornada()" :style="'background-color:' + settings.colorMaestro" class="text-white p-5 rounded-full shadow-2xl active:scale-75"><i data-lucide="save" class="w-7 h-7"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="screen === 3" x-cloak class="p-4 max-w-md mx-auto pb-32">
+        <header class="flex justify-between items-center mb-6">
+            <button @click="screen = 1" class="p-2 bg-slate-800 rounded-full"><i data-lucide="arrow-left"></i></button>
+            <h2 class="text-xl font-black uppercase tracking-tighter italic">Nómina Ciclo</h2>
+        </header>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-blue-500">
+                <span class="text-[8px] font-black text-slate-500 uppercase block mb-1">H. Totales</span>
+                <p class="text-2xl font-black text-blue-400" x-text="stats.hTotales"></p>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-green-500">
+                <span class="text-[8px] font-black text-slate-500 uppercase block mb-1">Dietas</span>
+                <p class="text-2xl font-black text-green-400" x-text="stats.numDietas"></p>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-red-500">
+                <span class="text-[8px] font-black text-slate-500 uppercase block mb-1">Festivos</span>
+                <p class="text-2xl font-black text-red-400" x-text="stats.numFestivos"></p>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-orange-500">
+                <span class="text-[8px] font-black text-slate-500 uppercase block mb-1">Partidas</span>
+                <p class="text-2xl font-black text-orange-400" x-text="stats.numPartidas"></p>
+            </div>
+            <div class="glass-card p-3 rounded-2xl border-l-4 border-cyan-500 col-span-2">
+                <div class="flex justify-between items-center px-2">
+                    <span class="text-[8px] font-black text-slate-500 uppercase tracking-widest">Kilometraje Ciclo</span>
+                    <p class="text-lg font-black text-cyan-400" x-text="stats.kmTotales + ' KM'"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-2 px-2 flex justify-between items-end">
+            <span class="text-[12px] font-black text-white uppercase bg-blue-600 px-4 py-1.5 rounded-t-xl" x-text="'Semana ' + currentWeek"></span>
+        </div>
+
+        <div class="glass-card rounded-b-3xl rounded-tr-3xl overflow-hidden border border-white/5 mb-6">
+            <table class="w-full text-center">
+                <thead class="bg-black/40 text-[7px] text-slate-500 uppercase">
+                    <tr>
+                        <th class="p-3 text-left">Día</th>
+                        <th>Bus</th>
+                        <th>H.</th>
+                        <th>D.</th>
+                        <th>F.</th>
+                        <th>P.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody class="text-[9px] font-bold divide-y divide-white/5">
+                    <template x-for="item in historial" :key="item.id">
+                        <tr>
+                            <td class="p-3 text-left flex items-center gap-2" @click="cargarRegistro(item)">
+                                <div :class="item.esPartida ? 'bg-orange-500' : 'bg-blue-400'" class="w-1.5 h-1.5 rounded-full shrink-0"></div>
+                                <span x-text="item.fecha"></span>
+                            </td>
+                            <td x-text="item.bus"></td>
+                            <td x-text="item.horas"></td>
+                            <td x-text="item.dietas" class="text-green-400"></td>
+                            <td x-text="item.esFestivo ? '1' : '-'" class="text-red-400"></td>
+                            <td x-text="item.esPartida ? '1' : '-'" class="text-orange-400"></td>
+                            <td class="p-1"><button @click="borrarRegistro(item.id)" class="text-red-500/30 p-2"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <button @click="enviarAGoogle()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all mb-12">
+            <i data-lucide="cloud-upload" class="w-5 h-5"></i>
+            <span class="uppercase text-xs tracking-widest">Subir Semana a Google Sheets</span>
+        </button>
+    </div>
+
+    <div x-show="screen === 4" x-cloak class="p-4 max-w-md mx-auto pb-24">
+        <header class="flex items-center gap-4 mb-8">
+            <button @click="screen = 1" class="p-2 bg-slate-800 rounded-full"><i data-lucide="arrow-left"></i></button>
+            <h2 class="text-xl font-black uppercase tracking-tighter">Configuración</h2>
+        </header>
+
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-3">
+                <button @click="abrirCalculadora()" class="glass-card p-4 rounded-3xl flex flex-col items-center gap-2 border-b-4 border-yellow-500 active:scale-95 transition">
+                    <i data-lucide="calculator" class="text-yellow-500 w-6 h-6"></i>
+                    <span class="font-black uppercase text-[10px]">Calculadora</span>
+                </button>
+                <button @click="abrirGoogleDrive()" class="glass-card p-4 rounded-3xl flex flex-col items-center gap-2 border-b-4 border-green-500 active:scale-95 transition">
+                    <i data-lucide="file-text" class="text-green-500 w-6 h-6"></i>
+                    <span class="font-black uppercase text-[10px]">Mi Google</span>
+                </button>
+            </div>
+
+            <button @click="gestionarArchivos()" class="w-full glass-card p-5 rounded-3xl flex items-center justify-between border-l-4 border-indigo-500 active:scale-95 transition">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="database" class="text-indigo-400"></i>
+                    <div class="text-left">
+                        <span class="block text-[10px] font-black uppercase">Gestor de Archivos</span>
+                        <span class="text-[8px] text-slate-500 italic">Limpieza automática 6 meses</span>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" class="text-slate-600"></i>
+            </button>
+
+            <div class="glass-card p-5 rounded-3xl border-l-4 border-green-500">
+                <label class="text-[10px] font-black text-green-500 uppercase block mb-3">Google Sheets API URL</label>
+                <input type="text" x-model="settings.sheetUrl" @change="saveSett()" placeholder="https://script.google.com/..." class="bg-slate-900 border border-white/10 p-4 rounded-xl font-mono text-[9px] w-full outline-none text-slate-300">
+            </div>
+
+            <div class="glass-card p-5 rounded-3xl">
+                <label class="text-[10px] font-black text-slate-500 block mb-4 uppercase">Tamaño Texto</label>
+                <input type="range" x-model="settings.fontSize" @input="saveSett()" min="12" max="22" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none accent-blue-500">
+            </div>
+
+            <div class="glass-card p-5 rounded-3xl">
+                <label class="text-[10px] font-black text-slate-500 block mb-5 uppercase">Color Maestro</label>
+                <div class="flex justify-between px-2">
+                    <template x-for="color in palette">
+                        <button @click="settings.colorMaestro = color; saveSett()" class="color-dot" :style="'background-color:' + color" :class="settings.colorMaestro === color ? 'active' : ''"></button>
+                    </template>
+                </div>
+            </div>
+            
+            <button @click="if(confirm('¿Borrar todo?')) { historial = []; saveHist(); calcularTotales(); }" class="w-full p-4 text-[10px] font-black uppercase text-red-500 opacity-50">Resetear Datos Completos</button>
+        </div>
+    </div>
+
+    <script>
+        function appBus() {
+            return {
+                screen: 1, currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), currentWeek: 0,
+                monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+                daysInMonth: [], fechaSeleccionada: '', timeNow: '00:00:00',
+                palette: ['#71717a', '#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
+                settings: { fontSize: 16, colorMaestro: '#71717a', sheetUrl: '' },
+                form: { id: null, esPartida: false, bus1: '', hE1: '', hS1: '', kmI1: '', kmF1: '', bus2: '', hE2: '', hS2: '', kmI2: '', kmF2: '', comida: false, cena: false, festivo: false },
+                res: { hTotal: '06:00', totalMinutos: 0, kmTotal: 0 },
+                historial: [],
+                stats: { hTotales: '0:00', numPartidas: 0, numDietas: 0, numFestivos: 0, kmTotales: 0 },
+                alertaComida: false, alertaCena: false,
+
+                init() {
+                    this.historial = JSON.parse(localStorage.getItem('bus_historial') || '[]');
+                    this.settings = JSON.parse(localStorage.getItem('bus_settings') || JSON.stringify(this.settings));
+                    this.currentWeek = this.getISOWeek(new Date());
+                    this.limpiezaAutomatica();
+                    this.renderCalendar();
+                    this.updateClock();
+                    this.calcularTotales();
+                    setInterval(() => this.updateClock(), 1000);
+                    this.actualizarIconos();
+                },
+
+                getISOWeek(date) {
+                    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                },
+
+                updateClock() { this.timeNow = new Date().toLocaleTimeString('es-ES', { hour12: false }); },
+                
+                renderCalendar() {
+                    let first = new Date(this.currentYear, this.currentMonth, 1).getDay();
+                    let days = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
+                    first = (first === 0) ? 6 : first - 1;
+                    this.daysInMonth = [];
+                    for (let i = 0; i < first; i++) this.daysInMonth.push({ num: null });
+                    for (let i = 1; i <= days; i++) {
+                        this.daysInMonth.push({ num: i, isToday: new Date().toDateString() === new Date(this.currentYear, this.currentMonth, i).toDateString() });
+                    }
+                },
+
+                formatearFecha(dia) { return `${dia.toString().padStart(2,'0')}/${(this.currentMonth + 1).toString().padStart(2,'0')}`; },
+                tieneRegistro(dia) { return this.historial.some(h => h.fecha === this.formatearFecha(dia)); },
+                obtenerTipoRegistro(dia) { return (this.historial.find(h => h.fecha === this.formatearFecha(dia))?.esPartida) ? 'partida' : 'continua'; },
+
+                seleccionarDia(dia) {
+                    const f = this.formatearFecha(dia);
+                    const r = this.historial.find(h => h.fecha === f);
+                    this.fechaSeleccionada = f;
+                    if(r) this.cargarRegistro(r);
+                    else this.openRegistro('continua');
+                },
+
+                openRegistro(t) {
+                    this.form = { id: Date.now(), esPartida: (t === 'partida'), bus1: '', hE1: '', hS1: '', kmI1: '', kmF1: '', bus2: '', hE2: '', hS2: '', kmI2: '', kmF2: '', comida: false, cena: false, festivo: false };
+                    this.screen = 2;
+                    this.calcular();
+                    this.actualizarIconos();
+                },
+
+                cargarRegistro(item) {
+                    this.form = JSON.parse(JSON.stringify(item.datos));
+                    this.fechaSeleccionada = item.fecha;
+                    this.screen = 2;
+                    this.calcular();
+                    this.actualizarIconos();
+                },
+
+                calcular() {
+                    const toM = (t) => { if(!t) return null; let [h,m] = t.split(':').map(Number); return h*60+m; };
+                    let m1 = (toM(this.form.hS1) < toM(this.form.hE1)) ? (toM(this.form.hS1)+1440) - toM(this.form.hE1) : toM(this.form.hS1) - toM(this.form.hE1);
+                    let m2 = 0;
+                    if(this.form.esPartida && this.form.hE2 && this.form.hS2) {
+                        m2 = (toM(this.form.hS2) < toM(this.form.hE2)) ? (toM(this.form.hS2)+1440) - toM(this.form.hE2) : toM(this.form.hS2) - toM(this.form.hE2);
+                    }
+                    let realMins = (m1 || 0) + (m2 || 0);
+                    let totalMins = (realMins > 0 && realMins < 360) ? 360 : realMins;
+                    this.res.hTotal = `${Math.floor(totalMins/60).toString().padStart(2,'0')}:${(totalMins%60).toString().padStart(2,'0')}`;
+                    this.res.kmTotal = ((parseInt(this.form.kmF1) - parseInt(this.form.kmI1)) || 0) + ((parseInt(this.form.kmF2) - parseInt(this.form.kmI2)) || 0);
+                    const s1 = toM(this.form.hS1);
+                    const s2 = toM(this.form.hS2);
+                    const salidaFinal = this.form.esPartida ? s2 : s1;
+                    const regla9h = (realMins >= 540 && s1 >= 900);
+                    const regla6h = (realMins >= 360 && s1 >= 930);
+                    this.alertaComida = (regla9h || regla6h);
+                    this.alertaCena = (realMins >= 540 && salidaFinal >= 1380);
+                },
+
+                guardarJornada() {
+                    if(!this.form.bus1) { alert("¡Falta número de BUS!"); return; }
+                    const reg = {
+                        id: this.form.id, fecha: this.fechaSeleccionada,
+                        bus: this.form.esPartida ? `${this.form.bus1}/${this.form.bus2||'?'}` : this.form.bus1,
+                        horas: this.res.hTotal, esPartida: this.form.esPartida, esFestivo: this.form.festivo,
+                        dietas: (this.form.comida?1:0) + (this.form.cena?1:0),
+                        km: this.res.kmTotal, datos: JSON.parse(JSON.stringify(this.form))
+                    };
+                    const idx = this.historial.findIndex(h => h.fecha === this.fechaSeleccionada);
+                    if(idx > -1) this.historial[idx] = reg; else this.historial.unshift(reg);
+                    this.saveHist(); this.calcularTotales(); this.screen = 1; this.actualizarIconos();
+                },
+
+                calcularTotales() {
+                    let mt = 0, dt = 0, pt = 0, ft = 0, kt = 0;
+                    this.historial.forEach(h => {
+                        let [hh,mm] = h.horas.split(':').map(Number); mt += (hh*60+mm);
+                        dt += h.dietas; if(h.esPartida) pt++; if(h.esFestivo) ft++; kt += h.km;
+                    });
+                    this.stats = { hTotales: `${Math.floor(mt/60)}:${(mt%60).toString().padStart(2,'0')}`, numDietas: dt, numPartidas: pt, numFestivos: ft, kmTotales: kt };
+                },
+
+                enviarAGoogle() { alert(`Subiendo datos Ciclo Semana ${this.currentWeek}...`); },
+                gestionarArchivos() { if(confirm(`¿Limpiar registros de más de 6 meses?`)) this.limpiezaAutomatica(true); },
+
+                limpiezaAutomatica(manual = false) {
+                    const seisMesesAtras = Date.now() - (180 * 24 * 60 * 60 * 1000);
+                    this.historial = this.historial.filter(h => h.id > seisMesesAtras);
+                    this.saveHist(); this.calcularTotales();
+                },
+
+                borrarRegistro(id) { if(confirm('¿Borrar?')) { this.historial = this.historial.filter(h => h.id !== id); this.saveHist(); this.calcularTotales(); } },
+                saveHist() { localStorage.setItem('bus_historial', JSON.stringify(this.historial)); },
+                saveSett() { localStorage.setItem('bus_settings', JSON.stringify(this.settings)); },
+                volverAlInicio() { this.screen = 1; this.actualizarIconos(); },
+                changeMonth(s) { this.currentMonth += s; if(this.currentMonth>11){this.currentMonth=0;this.currentYear++}else if(this.currentMonth<0){this.currentMonth=11;this.currentYear--} this.renderCalendar(); },
+                abrirAlarma() { window.location.href = "intent://com.android.deskclock/#Intent;scheme=android-app;end"; },
+                abrirCalculadora() { window.open('https://www.google.com/search?q=calculadora', '_blank'); },
+                abrirGoogleDrive() { window.open('https://drive.google.com', '_blank'); },
+                actualizarIconos() { this.$nextTick(() => lucide.createIcons()); }
+            }
+        }
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        const swBlob = new Blob([`
+          const CACHE = 'bus-v2';
+          self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./']))));
+          self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+        `], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(swBlob);
+        navigator.serviceWorker.register(swUrl).catch(e => console.log('SW Fail'));
+      }
+    </script>
+</body>
+</html>
