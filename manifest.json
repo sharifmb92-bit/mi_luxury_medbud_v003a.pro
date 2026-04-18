@@ -1,0 +1,17 @@
+{
+  "name": "MED BASHA PRO",
+  "short_name": "MBA PRO",
+  "description": "Registro de Jornada Conductor Menorca",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
